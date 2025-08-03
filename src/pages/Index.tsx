@@ -1,14 +1,27 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import React, { useState, useEffect } from 'react';
+import { MapContainer } from '../components/MapContainer';
+import { MapboxTokenInput } from '../components/MapboxTokenInput';
 
 const Index = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
-  );
+  const [mapboxToken, setMapboxToken] = useState<string>('');
+
+  useEffect(() => {
+    // Check for stored token
+    const storedToken = localStorage.getItem('mavmap-mapbox-token');
+    if (storedToken) {
+      setMapboxToken(storedToken);
+    }
+  }, []);
+
+  const handleTokenSubmit = (token: string) => {
+    setMapboxToken(token);
+  };
+
+  if (!mapboxToken) {
+    return <MapboxTokenInput onTokenSubmit={handleTokenSubmit} />;
+  }
+
+  return <MapContainer mapboxToken={mapboxToken} />;
 };
 
 export default Index;
