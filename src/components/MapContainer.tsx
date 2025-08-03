@@ -15,9 +15,17 @@ export const MapContainer = ({ mapboxToken }: MapContainerProps) => {
   const map = useRef<mapboxgl.Map | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSpinning, setIsSpinning] = useState(true);
+  const [mapError, setMapError] = useState<string>('');
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
 
   useEffect(() => {
     if (!mapContainer.current || !mapboxToken) return;
+
+    // Validate token format
+    if (!mapboxToken.startsWith('pk.')) {
+      setMapError('Invalid Mapbox token format. Token should start with "pk."');
+      return;
+    }
 
     // Initialize map
     mapboxgl.accessToken = mapboxToken;
@@ -29,6 +37,24 @@ export const MapContainer = ({ mapboxToken }: MapContainerProps) => {
       zoom: 1.5,
       center: [30, 15],
       pitch: 45,
+    });
+
+    
+    // Error handling
+    map.current.on('error', (e) => {
+      console.error('Mapbox error:', e);
+      if (e.error?.message?.includes('Unauthorized') || e.error?.message?.includes('Invalid Token')) {
+        setMapError('Invalid Mapbox token. Please check your token and try again.');
+      } else {
+        setMapError('Failed to load map. Please check your internet connection.');
+      }
+    });
+
+    // Success handling
+    map.current.on('load', () => {
+      setIsMapLoaded(true);
+      setMapError('');
+      toast.success("Mav Map initialized! 🌍");
     });
 
     // Add navigation controls
@@ -97,13 +123,11 @@ export const MapContainer = ({ mapboxToken }: MapContainerProps) => {
     // Start the globe spinning
     spinGlobe();
 
-    toast.success("Mav Map initialized! 🌍");
-
     // Cleanup
     return () => {
       map.current?.remove();
     };
-  }, [mapboxToken, isSpinning]);
+  }, [mapboxToken, isSpinning, mapError]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,6 +210,49 @@ export const MapContainer = ({ mapboxToken }: MapContainerProps) => {
               Get Mapbox Token
             </a>
           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (mapError) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-background to-background/80">
+        <div className="text-center space-y-4 p-8 bg-card/30 backdrop-blur-md rounded-xl border border-destructive/20 max-w-md">
+          <div className="w-12 h-12 bg-destructive/20 rounded-full flex items-center justify-center mx-auto">
+            <span className="text-destructive text-xl">⚠️</span>
+          </div>
+          <h2 className="text-xl font-bold text-destructive">
+            Map Error
+          </h2>
+          <p className="text-muted-foreground text-sm">
+            {mapError}
+          </p>
+          <div className="space-y-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                localStorage.removeItem('mavmap-mapbox-token');
+                window.location.reload();
+              }}
+            >
+              Enter New Token
+            </Button>
+            <Button variant="glass" asChild>
+              <a href="https://account.mapbox.com/access-tokens/" target="_blank" rel="noopener noreferrer">
+                Get Valid Token
+              </a>
+            </Button>
+          </div>
+          <div className="mt-4 p-3 bg-muted/20 rounded-lg border border-border/20 text-left">
+            <p className="text-xs text-muted-foreground">
+              <strong>How to get a token:</strong><br />
+              1. Go to mapbox.com<br />
+              2. Create a free account<br />
+              3. Find your token in Account → Access tokens<br />
+              4. Copy the token that starts with "pk."
+            </p>
+          </div>
         </div>
       </div>
     );
